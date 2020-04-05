@@ -3,8 +3,8 @@
 
 const int ROW = 42;
 const int COL = 32;
-int buffer0[42][32]; // Buffers are 2 larger that the screen so we can have a border of 0s.
-int buffer1[42][32]; // Just a 2D array of integers
+unsigned char buffer0[42][32]; // Buffers are 2 larger that the screen so we can have a border of 0s.
+unsigned char buffer1[42][32]; // Just a 2D array of integers
 int reset = 0;
 
 void LoadResources();
