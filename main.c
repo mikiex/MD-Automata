@@ -1,6 +1,4 @@
-// TODO: Convert from 2D to 1D array, or possibly Rows?
-// Would be easier to add literal conway patters such as gliders
-// Should allow us to use faster tile uploading to Vram with a rect?
+// TODO: See if we can upload a rect to vram directly from the array!!!!!!!
 
 #include <genesis.h>
 #include <resources.h>
@@ -9,7 +7,6 @@ const int ROW = 42;
 const int COL = 30;
 unsigned char buffer0[42][30]; // Buffers are 2 larger that the screen so we can have a border of 0s.
 unsigned char buffer1[42][30]; // Just a 2D array of integers
-//int resetState = 0; // To reset the board
 int bufferState = 0; // Used to swap bettween buffers
 enum filltype {fill_rand, fill_glider}; //TODO: Add a glider generator and other patterns
 typedef enum {joy_none,joy_left,joy_right} joystates;
@@ -152,6 +149,7 @@ void ClearTiles(unsigned char buffer[ROW][COL])
 	}
 }
 
+// TODO: upload rect instead of looping and doing 1 tile at a time???
 void DrawTiles(unsigned char buffer[ROW][COL])
 {
 	// Miss out 0s around the edges, so we read +1 in, up to the end -1.
