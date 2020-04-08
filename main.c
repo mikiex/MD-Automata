@@ -1,43 +1,60 @@
+// TODO: Convert from 2D to 1D array, or possibly Rows?
+// Would be easier to add literal conway patters such as gliders
+// Should allow us to use faster tile uploading to Vram with a rect?
+
 #include <genesis.h>
 #include <resources.h>
 
-const int ROW = 42;
+const int ROW = 42; 
 const int COL = 30;
 unsigned char buffer0[42][30]; // Buffers are 2 larger that the screen so we can have a border of 0s.
 unsigned char buffer1[42][30]; // Just a 2D array of integers
-int resetState = 0; //To reset the board
-int bufferState = 0; //used to swap bettween buffers
+//int resetState = 0; // To reset the board
+int bufferState = 0; // Used to swap bettween buffers
+enum filltype {fill_rand, fill_glider}; //TODO: Add a glider generator and other patterns
+typedef enum {joy_none,joy_left,joy_right} joystates;
+joystates joyPressed = joy_none;
 
 void LoadResources();
 void FillTiles(unsigned char buffer[ROW][COL]);
+void FillGlider(unsigned char buffer[ROW][COL]);
 void ClearTiles(unsigned char buffer[ROW][COL]);
 void DrawTiles(unsigned char buffer[ROW][COL]);
 int CountNeighbors(unsigned char buffer[ROW][COL],int xpos, int ypos);
 void ProcessBuffer(unsigned char bufferA[ROW][COL],unsigned char bufferB[ROW][COL]);
 void myJoyHandler( u16 joy, u16 changed, u16 state);
+void init(enum filltype f);
+
+// Patterns
+unsigned char patternGlider[3][3]=
+{
+	{1,0,0},
+	{0,1,1},
+	{1,1,0}
+};
 
 int main()
 {
 	JOY_init();
 	JOY_setEventHandler( &myJoyHandler );
 	LoadResources();
-	ClearTiles(buffer0);
-	ClearTiles(buffer1);
-	FillTiles(buffer0);
-	bufferState = 0;
-	resetState = 0;
+	InitBuffer(fill_rand);
+
 
     while(1)
     {
-		if (resetState == 1)
+		if (joyPressed  == joy_left)
 		{	
-			ClearTiles(buffer0);
-			ClearTiles(buffer1);
-			FillTiles(buffer0);
-			bufferState = 0;
-			resetState = 0;
+			InitBuffer(fill_glider);
 		}
-		
+
+		if (joyPressed  == joy_right)
+		{	
+			InitBuffer(fill_rand);
+		}
+
+		joyPressed = joy_none; //Clear Joy state
+
 		if (bufferState == 0)
 		{
 			ProcessBuffer(buffer0,buffer1);
@@ -54,6 +71,31 @@ int main()
 		VDP_waitVSync();
     }
     return (0);
+}
+
+void InitBuffer(enum filltype f)
+{
+	if (f == fill_rand)
+	{
+		ClearTiles(buffer0);
+		ClearTiles(buffer1);
+		bufferState = 0;
+		FillTiles(buffer0);
+	}
+	
+	if (f == fill_glider)
+	{
+		if (bufferState == 0)
+		{
+			FillGlider(buffer0);
+		}
+		else
+		{
+			FillGlider(buffer1);
+		}
+		
+	}
+
 }
 
 // Load images.
@@ -82,7 +124,21 @@ void FillTiles(unsigned char buffer[ROW][COL])
 
 		}
 	}
-	
+}
+
+void FillGlider(unsigned char buffer[ROW][COL])
+{
+	int xpos = 1 + (random() % (ROW -1));
+	int ypos = 1 + (random() % (COL -1));
+	for (int x = 0; x < 3; ++x)
+  	{
+		for (int y = 0; y < 3; ++y)
+		{
+
+			buffer[x+xpos][y+ypos] = patternGlider[x][y];
+			
+		}
+	}
 }
 
 void ClearTiles(unsigned char buffer[ROW][COL])
@@ -155,7 +211,7 @@ void ProcessBuffer(unsigned char bufferA[ROW][COL],unsigned char bufferB[ROW][CO
 				// Give birth.
 					bufferB[x][y] = 1;
 			}
-			else // Cell is dead but we still need to copy the 0 state
+			else // Cell is dead but we still need to copy the 0 dead state as there maybe garbage in the destination buffer
 			{
 				bufferB[x][y] = 0; 
 			}
@@ -169,7 +225,12 @@ void myJoyHandler( u16 joy, u16 changed, u16 state)
 	{
 		if (state & BUTTON_RIGHT)
 		{
-			resetState = 1;
+			joyPressed = joy_right;
+		}
+
+		if (state & BUTTON_LEFT)
+		{
+			joyPressed = joy_left;
 		}
 	}
 }
