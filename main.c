@@ -8,27 +8,33 @@ const int COL = 30;
 unsigned char buffer0[42][30]; // Buffers are 2 larger that the screen so we can have a border of 0s.
 unsigned char buffer1[42][30]; // Just a 2D array of integers
 int bufferState = 0; // Used to swap bettween buffers
-enum filltype {fill_rand, fill_glider}; //TODO: Add a glider generator and other patterns
-typedef enum {joy_none,joy_left,joy_right} joystates;
+enum filltype {fill_rand, spawn_glider, fill_gosper}; //TODO: Add a glider generator and other patterns
+typedef enum {joy_none,  joy_left,joy_right, joy_up, joy_down} joystates;
 joystates joyPressed = joy_none;
 
+typedef struct coords {
+unsigned char x;
+unsigned char y;} coords;
+
 void LoadResources();
+void FillPattern(unsigned char buffer[ROW][COL],coords cells[], int xoffset, int yoffset, int cellcount);
 void FillTiles(unsigned char buffer[ROW][COL]);
-void FillGlider(unsigned char buffer[ROW][COL]);
 void ClearTiles(unsigned char buffer[ROW][COL]);
 void DrawTiles(unsigned char buffer[ROW][COL]);
 int CountNeighbors(unsigned char buffer[ROW][COL],int xpos, int ypos);
 void ProcessBuffer(unsigned char bufferA[ROW][COL],unsigned char bufferB[ROW][COL]);
 void myJoyHandler( u16 joy, u16 changed, u16 state);
-void init(enum filltype f);
+void InitBuffer(enum filltype f);
 
 // Patterns
-unsigned char patternGlider[3][3]=
-{
-	{1,0,0},
-	{0,1,1},
-	{1,1,0}
-};
+coords coord_Glider[] = {{0, 0},{1, 1},{2, 1},{0, 2},{1, 2}};
+
+coords coord_Gosper[] = {
+                         {1, 5},{2, 5},{1, 6},{2, 6},
+                         {13, 3},{14, 3},{12, 4},{16, 4},{11, 5},{17, 5},{11, 6},{15, 6},{17, 6},{18, 6},{11, 7},{17, 7},{12, 8},{16, 8},{13, 9},{14, 9},
+                         {25, 1},{23, 2},{25, 2},{21, 3},{22, 3},{21, 4},{22, 4},{21, 5},{22, 5},{23, 6},{25, 6},{25, 7},
+                         {36, 3},{35, 3},{36, 4},{35, 4}};
+
 
 int main()
 {
@@ -42,12 +48,24 @@ int main()
     {
 		if (joyPressed  == joy_left)
 		{	
-			InitBuffer(fill_glider);
+			InitBuffer(spawn_glider);
 		}
 
 		if (joyPressed  == joy_right)
 		{	
 			InitBuffer(fill_rand);
+		}
+
+		if (joyPressed  == joy_up) // Clear buffers
+		{	
+			ClearTiles(buffer0);
+			ClearTiles(buffer1);
+			bufferState = 0;
+		}
+
+		if (joyPressed  == joy_down)
+		{	
+			InitBuffer(fill_gosper);
 		}
 
 		joyPressed = joy_none; //Clear Joy state
@@ -79,18 +97,25 @@ void InitBuffer(enum filltype f)
 		bufferState = 0;
 		FillTiles(buffer0);
 	}
-	
-	if (f == fill_glider)
+
+	if (f == spawn_glider)
 	{
 		if (bufferState == 0)
 		{
-			FillGlider(buffer0);
+			FillPattern(buffer0, coord_Glider, (1 + (random() % (ROW -5))), (1 + (random() % (COL -5))), 5); // -5 to stop adding past edges!
 		}
 		else
 		{
-			FillGlider(buffer1);
+			FillPattern(buffer1, coord_Glider, (1 + (random() % (ROW -5))), (1 + (random() % (COL -5))), 5);
 		}
-		
+	}
+
+	if (f == fill_gosper)
+	{
+		ClearTiles(buffer0);
+		ClearTiles(buffer1);
+		bufferState = 0;
+		FillPattern(buffer0, coord_Gosper,1,1,36);
 	}
 
 }
@@ -123,20 +148,16 @@ void FillTiles(unsigned char buffer[ROW][COL])
 	}
 }
 
-void FillGlider(unsigned char buffer[ROW][COL])
-{
-	int xpos = 1 + (random() % (ROW -1));
-	int ypos = 1 + (random() % (COL -1));
-	for (int x = 0; x < 3; ++x)
-  	{
-		for (int y = 0; y < 3; ++y)
-		{
 
-			buffer[x+xpos][y+ypos] = patternGlider[x][y];
-			
-		}
+void FillPattern(unsigned char buffer[ROW][COL],coords cells[], int xoffset, int yoffset, int cellcount)
+{
+	for (int i = 0; i < cellcount; ++i)
+  	{
+		buffer[xoffset + cells[i].x][yoffset + cells[i].y] = 1;
 	}
+
 }
+
 
 void ClearTiles(unsigned char buffer[ROW][COL])
 {
@@ -229,6 +250,16 @@ void myJoyHandler( u16 joy, u16 changed, u16 state)
 		if (state & BUTTON_LEFT)
 		{
 			joyPressed = joy_left;
+		}
+
+		if (state & BUTTON_UP)
+		{
+			joyPressed = joy_up;
+		}
+
+		if (state & BUTTON_DOWN)
+		{
+			joyPressed = joy_down;
 		}
 	}
 }
